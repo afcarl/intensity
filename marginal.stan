@@ -4,13 +4,13 @@ functions{
 
   // This function is the variable Poisson intensity
   real dNdz(real z, real r0, real alpha, real beta) {
-    return r0*(1.0+z)^(alpha)*exp(-z/beta);
+    return r0 * (1.0 + z)^(alpha) * exp(-z/beta);
   }
 
 
   // While we can do the integral in this case analytically,
   // I want to go ahead and allow for the ability to perform the
-  // integral as the model exands
+  // integral as the model expands
   real[] N_integrand(real z, real[] state, real[] params, real[] x_r, int[] x_i) {
 
     real r0;
@@ -38,6 +38,8 @@ data{
   real zth; // The known threshold of measurements.
   int Nnobs_max; // The truncation of the marginalization
 
+  real true_upper; // upper bound on true values
+  real meas_upper; // upper bound on measured values
 
   int nmodel; /* The number of points at which the model should be
 		 computed and stored (for convenient plotting
@@ -51,7 +53,7 @@ transformed data {
   int x_i[0];
   real zout[1];
 
-  zout[1] = 10.0;
+  zout[1] = true_upper;
 }
 parameters{
 
@@ -61,15 +63,15 @@ parameters{
   real<lower=0> beta;
 
   // the true redshifts truncated at z=10
-  real<lower=0,upper=10> ztrue[nobs];
+  real<lower=0,upper=true_upper> ztrue[nobs];
 
   // The unobserved true and measured redshifts
   // The idea here is that the selection is simulated
   // because the observed data can only come from above
   // the redshift threshold.
   
-  vector<lower=0,upper=10>[Nnobs_max] znobs_true;
-  vector<lower=zth,upper=15>[Nnobs_max] znobs;
+  vector<lower=0,upper=true_upper>[Nnobs_max] znobs_true;
+  vector<lower=zth,upper=meas_upper>[Nnobs_max] znobs;
   
 }
 
@@ -115,7 +117,9 @@ model{
   
   // now marginalize out M
 
-  target += -Nnobs_max*log(10.-zth);
+  target += -Nnobs_max*log(meas_upper-zth);
+
+  target += -Nnobs_max*log(true_upper);
   
   {
     vector[Nnobs_max+1] marginal_term;
@@ -123,7 +127,7 @@ model{
     // the truncation should extend far enough to cover the number of unobserved events
     for (i in 1:Nnobs_max) {
 
-      marginal_term[i+1] = log(dNdz(znobs_true[i], r0, alpha, beta)) + lognormal_lpdf(znobs[i] | log(znobs_true[i]), sigma_obs) - log(i) + log(10-zth);
+      marginal_term[i+1] = log(dNdz(znobs_true[i], r0, alpha, beta)) + lognormal_lpdf(znobs[i] | log(znobs_true[i]), sigma_obs) - log(i) + log(meas_upper-zth) + log(true_upper);
 
     }
 
