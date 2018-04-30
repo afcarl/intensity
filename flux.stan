@@ -157,8 +157,8 @@ model{
   // first we have to make sure any of the distributions are normalized
   // for the latent population
   
-  target += -Nnobs_max*log(Fth);
-  target += -Nnobs_max*log(zmax);
+  /* target += -Nnobs_max*log(Fth); */
+  /* target += -Nnobs_max*log(zmax); */
 
   Ltrue_nobs ~ lognormal(mu, sigma);
 

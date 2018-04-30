@@ -1,4 +1,18 @@
+functions {
 
+
+  vector flux(vector luminosity, vector z){
+
+    vector[num_elements(z)] z1;
+    z1 = z+1;
+    
+    return luminosity ./ (4*pi()*z1 .* z1);
+
+  }
+
+
+
+}
 
 data {
 
@@ -53,9 +67,9 @@ transformed parameters{
   vector<lower=0>[Nobs] Ftrue; 
   vector<lower=0>[NNobs_max] Ftrue_nobs;
 
-  Ftrue = Ltrue ./ (4*pi() * zobs .* zobs);
+  Ftrue = flux(Ltrue, zobs);
   
-  Ftrue_nobs = Ltrue_nobs ./ (4*pi() * ztrue_nobs .* ztrue_nobs);
+  Ftrue_nobs = flux(Ltrue_nobs, ztrue_nobs);
   
 }
 
@@ -93,16 +107,10 @@ model {
     vector[NNobs_max+1] log_poisson_term;
     
     for (i in 1:NNobs_max) {
+            
       
-      // real log_ex_flux = log(Ltrue_nobs[i]) - log(4.0*pi()) - 2.0*log(ztrue_nobs[i]);
-      
-      //log_poisson_term[i+1] = log(Lambda) + lognormal_lpdf(flux_nobs[i] | log_ex_flux, Funcert) - log(i) + log(zmax) + log(Fth);
-      
-      
-      log_poisson_term[i+1] = log(Lambda) + lognormal_lpdf(flux_nobs[i] | log(Ftrue_nobs[i]), Funcert) - log(i) + log(Fth);
-
-      //     log_poisson_term[i+1] = log(Lambda) + lognormal_lpdf(flux_nobs[i] | log(Ftrue_nobs[i]), Funcert) - log(i);
-      
+      log_poisson_term[i+1] = log(Lambda) + lognormal_lpdf(flux_nobs[i] | log(Ftrue_nobs[i]), Funcert);
+      log_poisson_term[i+1] += -log(i) + log(Fth);
     }
     
     log_poisson_term[1] = 0.0;
@@ -112,6 +120,7 @@ model {
     target += log_sum_exp(log_poisson_term);
 
   }
+
   
   /* Poisson normalisation */
   target += -Lambda;
