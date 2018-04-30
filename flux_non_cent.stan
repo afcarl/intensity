@@ -33,12 +33,7 @@ functions{
     return luminosity ./ (4*pi() * z1 .* z1);
 
   }
-
-    vector ep_obs(vector ep, vector z){
-
-      return ep  ./ (1+z);
-  }
-
+  
   
 }
 
@@ -48,12 +43,9 @@ data{
   int Nobs; // The number of obserations
   int Nnobs_max; // The truncation of the marginalization
 
-  vector<lower=0>[Nobs] Fobs;
-  vector<lower=0>[Nobs] epobs; 
+  vector<lower=0>[Nobs] Fobs; 
   real sigma_F_obs;
-  real sigma_ep_obs;
-  real Fth; // The known threshold of measurements.
-  real eth; // The known threshold of measurements. 
+  real Fth; // The known threshold of measurements. 
   real zmax; // upper bound on true values
 
   int nmodel; /* The number of points at which the model should be
@@ -82,18 +74,13 @@ parameters{
   real mu;
   real<lower=0> sigma;
 
-    // luminosity function
-  real E0;
-  real<lower=0> E0sigma;
-
-  
   
   // the true redshifts truncated at z=zmax
   vector<lower=0,upper=zmax>[Nobs] ztrue;
 
-  // non-centered approach
+  
   vector[Nobs] Ltrue_tilde;
-  vector[Nobs] Etrue_tilde;
+
 
   // latent unobserved population parameters
 
@@ -103,11 +90,7 @@ parameters{
   // the flux parameters
   vector[Nnobs_max] Ltrue_nobs_tilde;
   vector<lower=0,upper=Fth>[Nnobs_max] flux_nobs;  
-
-  // the ep parameters
-  vector[Nnobs_max] Etrue_nobs_tilde;
-  vector<lower=0,upper=eth>[Nnobs_max] ep_nobs;  
-
+   
 }
 
 transformed parameters{
@@ -115,35 +98,22 @@ transformed parameters{
   // everything must be transformed via redshift
 
 
-
-
-  vector<lower=0>[Nobs] Ltrue;
-  vector<lower=0>[Nobs] Etrue;
-  vector<lower=0>[Nnobs_max] Ltrue_nobs;
-  vector<lower=0>[Nnobs_max] Etrue_nobs;
   
+  vector<lower=0>[Nobs] Ltrue;
+  vector<lower=0>[Nnobs_max] Ltrue_nobs;
   vector<lower=0>[Nobs] Ftrue; 
   vector<lower=0>[Nnobs_max] Ftrue_nobs;
 
-  vector<lower=0>[Nobs] eptrue; 
-  vector<lower=0>[Nnobs_max] eptrue_nobs;
 
   Ltrue = exp(mu + sigma*Ltrue_tilde);
-  Etrue = exp(E0 + E0sigma*Etrue_tilde);
-
   Ltrue_nobs = exp(mu + sigma*Ltrue_nobs_tilde);
-  Etrue_nobs = exp(E0 + E0sigma*Etrue_nobs_tilde);
-  
+    
 
   
   Ftrue = flux(Ltrue, ztrue);
+  
   Ftrue_nobs = flux(Ltrue_nobs, znobs_true);
 
-
-  eptrue = ep_obs(Etrue, ztrue);
-  eptrue_nobs = ep_obs(Etrue_nobs, znobs_true);
-
-  
 }
 
 model{
@@ -165,11 +135,6 @@ model{
   mu ~ normal(0.0, 3.0);
   sigma ~ normal(0.0, 0.5);
 
-  // luminosity function
-  E0 ~ normal(0.0, 10.0);
-  E0sigma ~ normal(0.0, 0.5);
-
-
   params[1] = r0;
   params[2] = alpha;
   params[3] = beta;
@@ -183,12 +148,10 @@ model{
   // object level
   
   Ltrue_tilde ~ normal(0, 1);
-  Etrue_tilde ~ normal(0, 1);
 
   //observed likelihood
 
   Fobs ~ lognormal(log(Ftrue), sigma_F_obs);
-  epobs ~ lognormal(log(eptrue), sigma_ep_obs);
 
   
   // we must go thru and add on the log intensity at these points
@@ -208,13 +171,9 @@ model{
   // for the latent population
   
   /* target += -Nnobs_max*log(Fth); */
-  /* target += -Nnobs_max*log(eth); */
   /* target += -Nnobs_max*log(zmax); */
 
-  
   Ltrue_nobs_tilde ~ normal(0, 1);
-  Etrue_nobs_tilde ~ normal(0, 1);
- 
 
   
   {
@@ -229,8 +188,6 @@ model{
 
       //now the likelihood
       marginal_term[i+1] += lognormal_lpdf(flux_nobs[i] | log(Ftrue_nobs[i]), sigma_F_obs);
-
-      marginal_term[i+1] += lognormal_lpdf(ep_nobs[i] | log(eptrue_nobs[i]), sigma_ep_obs);
 
       // finally the prior corrections and factorial
       marginal_term[i+1] += -log(i);// + log(Fth) + log(zmax);
@@ -252,10 +209,13 @@ model{
 
 generated quantities{
 
-   
+  
+  
   real dNdz_model[nmodel];
   
 
+  
+  
   for (i in 1:nmodel) {
     dNdz_model[i] = dNdz(zs_model[i], r0, alpha, beta);
   }
