@@ -18,16 +18,19 @@ data {
 
 transformed data {
   int<lower=1> N_margin = 100;
+  real<lower=0> sigma_x =1.;
+  real<lower=0> sigma_y = 0.75;
+  
 }
 
 parameters {
   real mu_x;
   real<lower=0> tau_x;
-  real<lower=0> sigma_x;
+  //  real<lower=0> sigma_x;
 
   real mu_y;
   real<lower=0> tau_y;
-  real<lower=0> sigma_y;
+  //  real<lower=0> sigma_y;
 
   real<lower=0> Lambda;
 
@@ -43,17 +46,17 @@ parameters {
 }
 
 model {
-  vector[N_margin + 1] log_prob_tilde;
+  //vector[N_margin + 1] log_prob_tilde;
   real sum_log_prob_tilde;
   vector[N_margin + 1] log_prob_margin;
 
   mu_x ~ normal(0, 5);
   tau_x ~ normal(0, 2);
-  sigma_x ~ normal(0, 2);
+  //  sigma_x ~ normal(0, 2);
 
   mu_y ~ normal(0, 5);
   tau_y ~ normal(0, 2);
-  sigma_y ~ normal(0, 2);
+  // sigma_y ~ normal(0, 2);
 
   Lambda ~ gamma(10, 0.06);
 
@@ -82,18 +85,18 @@ model {
 
   log_prob_margin[1] = 0;
   sum_log_prob_tilde = log_prob_margin[1];
-  log_prob_margin[1] = log_prob_margin[1];
+  //  log_prob_margin[1] = log_prob_margin[1];
 
   for (n in 1:N_margin) {
-    log_prob_tilde[n + 1] =  log1m_p_det(x_tilde[n], y_tilde[n])
-                           + normal_lpdf(x_tilde[n] | x_tilde_latent, sigma_x)
-                           + normal_lpdf(x_tilde_latent[n] | mu_x, tau_x)
+    sum_log_prob_tilde +=  log1m_p_det(x_tilde[n], y_tilde[n])
+                           + normal_lpdf(x_tilde[n] | x_tilde_latent[n], sigma_x)
+      //                     + normal_lpdf(x_tilde_latent[n] | mu_x, tau_x)
                            - normal_lpdf(x_tilde[n] | 0, 1)
-                           + normal_lpdf(y_tilde[n] | y_tilde_latent, sigma_y)
-                           + normal_lpdf(y_tilde_latent[n] | mu_y, tau_y)
+                           + normal_lpdf(y_tilde[n] | y_tilde_latent[n], sigma_y)
+      //                   + normal_lpdf(y_tilde_latent[n] | mu_y, tau_y)
                            - normal_lpdf(y_tilde[n] | 0, 1);
 
-    sum_log_prob_tilde += log_prob_tilde[n + 1];
+    //    sum_log_prob_tilde += log_prob_tilde[n + 1];
     log_prob_margin[n + 1] =  n * log(Lambda) - lgamma(n + 1)
                             + sum_log_prob_tilde;
   }
